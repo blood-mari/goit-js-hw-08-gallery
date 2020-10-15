@@ -1,11 +1,13 @@
 import boxGallery from './gallery-items.js';
+//console.log(boxGallery);
 
 // Создание галлереи
 
-const galleryEl = options => {
-    const { original, preview, desc } = options;
+const parentGalleryEl = document.querySelector('.js-gallery');
 
-    return `
+function onGalleryCreate(pictures) {
+    return pictures.map(({original, preview, desc}) => {
+      return  `
     <li class="gallery__item">
   <a
     class="gallery__link"
@@ -19,27 +21,19 @@ const galleryEl = options => {
     />
   </a>
 </li>
-    `;
+    `;}).join('');
 };
 
-// console.log(boxGallery);
 
-const parentGalleryEl = document.querySelector('.gallery');
-
-const galleryPushImg = boxGallery
-  .map(galleryEl)
-  .join('');
-
-parentGalleryEl.insertAdjacentHTML('afterbegin', galleryPushImg);
-
-// console.log(galleryPushImg);
+parentGalleryEl.insertAdjacentHTML('beforeend', onGalleryCreate(boxGallery));
 
 // Операции над модалкой
 
 const refs = {
     bigPicture: document.querySelector('.lightbox__image'),
     closeModalBtn: document.querySelector('[data-action="close-lightbox"]'),
-    backDrop: document.querySelector('.js-lightbox'),
+    backDrop: document.querySelector('.lightbox__overlay'),
+    openModal: document.querySelector('.js-lightbox')
 }
 
 parentGalleryEl.addEventListener('click', onOpenModal);
@@ -49,32 +43,86 @@ function onOpenModal(ev) {
 
     window.addEventListener('keydown', onEscPress);
 
-    if (ev.target.nodeName === "IMG") {
-    refs.backDrop.classList.add('is-open');
-    refs.bigPicture.src = ev.target.dataset.source;
-    }
+    window.addEventListener('keydown', previousImage);
 
-    return;
+    window.addEventListener('keydown', nextImage);
+
+    if (ev.target.nodeName !== "IMG") {
+        return;
+     }
+        refs.openModal.classList.add('is-open');
+
+        refs.bigPicture.src = ev.target.dataset.source;
+        refs.bigPicture.alt = ev.target.alt;
+
+        refs.closeModalBtn.addEventListener('click', onCloseBtnClick, ({ once: true }))
+
+
 }
 
-refs.closeModalBtn.addEventListener('click', onCloseBtnClick);
-
-function onCloseBtnClick(ev) {
+function onCloseBtnClick() {
     window.removeEventListener('keydown', onEscPress);
 
-    refs.backDrop.classList.remove('is-open');
-    refs.bigPicture.src = '';
+    window.removeEventListener('keydown', previousImage);
 
-    return;
+    window.removeEventListener('keydown', nextImage);
+
+    refs.openModal.classList.remove('is-open');
+    refs.bigPicture.src = '';
+    refs.bigPicture.alt = '';
 }
 
-refs.backDrop.addEventListener('click', onBackdropClick);
-
 function onBackdropClick(ev) {
-    if (event.currentTarget === event.target) {
+
+    if (ev.currentTarget === refs.backDrop) {
+        console.log('Кликнули в бекдроп');
         onCloseBtnClick();
     }
 }
 
+refs.backDrop.addEventListener('click', onBackdropClick);
 
+function onEscPress(ev) {
+    if (ev.code !== "Escape") {
+        return;
+    }
+    onCloseBtnClick();
+}
 
+function previousImage(ev) {
+    console.log(ev.key);
+
+    if (ev.key !== "ArrowLeft") {
+        return;
+    }
+
+        let index = boxGallery.findIndex((el) => {
+            return el.original === refs.bigPicture.getAttribute("src");
+        });
+        if (index === 0) {
+            index = boxGallery.length;
+        }
+        index -= 1;
+        const previousPic = boxGallery[index].original;
+    refs.bigPicture.setAttribute("src", previousPic);
+    refs.bigPicture.setAttribute("alt", previousPic);
+}
+
+function nextImage(ev) {
+    if (ev.key !== "ArrowRight") {
+        return;
+    }
+
+    let index = boxGallery.findIndex((el) => {
+      return el.original === refs.bigPicture.getAttribute("src");
+    });
+
+      if (index === boxGallery.length - 1) {
+            index = -1;
+        }
+        index += 1;
+        const nextPic = boxGallery[index].original;
+    refs.bigPicture.setAttribute("src", nextPic);
+    refs.bigPicture.setAttribute("alt", nextPic);
+
+    }
