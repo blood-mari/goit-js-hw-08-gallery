@@ -5,8 +5,10 @@ import boxGallery from './gallery-items.js';
 
 const parentGalleryEl = document.querySelector('.js-gallery');
 
+let currentIndex;
+
 function onGalleryCreate(pictures) {
-    return pictures.map(({original, preview, desc}) => {
+    return pictures.map(({original, preview, desc}, currentIndex) => {
       return  `
     <li class="gallery__item">
   <a
@@ -18,12 +20,14 @@ function onGalleryCreate(pictures) {
       src="${preview}"
       data-source="${original}"
       alt="${desc}"
+      data-index="${currentIndex}"
     />
   </a>
 </li>
-    `;}).join('');
-};
+    `;
+    }).join('');
 
+};
 
 parentGalleryEl.insertAdjacentHTML('beforeend', onGalleryCreate(boxGallery));
 
@@ -31,98 +35,73 @@ parentGalleryEl.insertAdjacentHTML('beforeend', onGalleryCreate(boxGallery));
 
 const refs = {
     bigPicture: document.querySelector('.lightbox__image'),
-    closeModalBtn: document.querySelector('[data-action="close-lightbox"]'),
     backDrop: document.querySelector('.lightbox__overlay'),
-    openModal: document.querySelector('.js-lightbox')
+    openModal: document.querySelector('.js-lightbox'),
+    closeModalBtn: document.querySelector('[data-action="close-lightbox"]'),
 }
 
 parentGalleryEl.addEventListener('click', onOpenModal);
 
+refs.backDrop.addEventListener('click', onCloseModal);
+
 function onOpenModal(ev) {
     ev.preventDefault();
 
-    window.addEventListener('keydown', onEscPress);
-
-    window.addEventListener('keydown', previousImage);
-
-    window.addEventListener('keydown', nextImage);
-
     if (ev.target.nodeName !== "IMG") {
         return;
-     }
-        refs.openModal.classList.add('is-open');
+    }
+
+    refs.openModal.classList.add('is-open');
+
+    document.addEventListener('keydown', onPressHandler);
 
         refs.bigPicture.src = ev.target.dataset.source;
-        refs.bigPicture.alt = ev.target.alt;
+    refs.bigPicture.alt = ev.target.alt;
 
-        refs.closeModalBtn.addEventListener('click', onCloseBtnClick, ({ once: true }))
+    currentIndex = Number(ev.target.dataset.index);
 
+        refs.closeModalBtn.addEventListener('click', onCloseModal, ({ once: true }))
 
 }
 
-function onCloseBtnClick() {
-    window.removeEventListener('keydown', onEscPress);
-
-    window.removeEventListener('keydown', previousImage);
-
-    window.removeEventListener('keydown', nextImage);
+function onCloseModal() {
 
     refs.openModal.classList.remove('is-open');
     refs.bigPicture.src = '';
     refs.bigPicture.alt = '';
 }
 
-function onBackdropClick(ev) {
+// Перелистывание стрелками
 
-    if (ev.currentTarget === refs.backDrop) {
-        console.log('Кликнули в бекдроп');
-        onCloseBtnClick();
-    }
-}
+function moveImageLeft(ev) {
 
-refs.backDrop.addEventListener('click', onBackdropClick);
+    if (currentIndex === 0) { currentIndex = boxGallery.length; }
 
-function onEscPress(ev) {
-    if (ev.code !== "Escape") {
-        return;
-    }
-    onCloseBtnClick();
-}
+    currentIndex -= 1;
 
-function previousImage(ev) {
-    console.log(ev.key);
+    const previousPic = boxGallery[currentIndex].original;
 
-    if (ev.key !== "ArrowLeft") {
-        return;
-    }
-
-        let index = boxGallery.findIndex((el) => {
-            return el.original === refs.bigPicture.getAttribute("src");
-        });
-        if (index === 0) {
-            index = boxGallery.length;
-        }
-        index -= 1;
-        const previousPic = boxGallery[index].original;
     refs.bigPicture.setAttribute("src", previousPic);
+
     refs.bigPicture.setAttribute("alt", previousPic);
+
 }
 
-function nextImage(ev) {
-    if (ev.key !== "ArrowRight") {
-        return;
-    }
+function moveImageRight(ev) {
 
-    let index = boxGallery.findIndex((el) => {
-      return el.original === refs.bigPicture.getAttribute("src");
-    });
-
-      if (index === boxGallery.length - 1) {
-            index = -1;
+      if (currentIndex === boxGallery.length - 1) {
+        currentIndex = -1;
         }
-        index += 1;
-        const nextPic = boxGallery[index].original;
+        currentIndex += 1;
+    const nextPic = boxGallery[currentIndex].original;
+
     refs.bigPicture.setAttribute("src", nextPic);
     refs.bigPicture.setAttribute("alt", nextPic);
 
+    }
+
+function onPressHandler(ev) {
+    if (ev.code === "Escape" || ev.currentTarget === refs.backDrop) onCloseModal();
+    if (ev.code === 'ArrowLeft') moveImageLeft();
+    if (ev.code === 'ArrowRight') moveImageRight();
     }
